@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Sui Replay Tool</title>
+  <!-- <link rel="stylesheet" href="styles.css" /> -->
+  <style>
+    .INSERT_STYLES_HERE{color:sui}
+  </style>
+</head>
+<body>
+  <script type="module">
+    import { createApp } from 'https://unpkg.com/petite-vue@0.2.2/dist/petite-vue.es.js';
+
+    // TODO: Replace this one with the actual JSON data from the replay.
+    const output = REPLACE_ME_WITH_THE_JSON_DATA_FROM_THE_REPLAY;
+
+    // Paste a JSON here in development.
+    // const output = {};
+    
+    // NOTE: Add any JSON.parse() or similar as needed before using `jsonObject` in the scripts.
+    const jsonObject = output;
+
+    function ExplorerLink(props) {
+      function getUrl({ id, isAddress, module, digest}){
+        if (digest) {
+          return `https://suiexplorer.com/txblock/${digest}?network=${this.network}`;
+        }
+        if (module) {
+          return `https://suiexplorer.com/${isAddress ? 'address' : 'object'}/${id}?module=${module}&network=${this.network}`;
+        }
+
+        return `https://suiexplorer.com/${isAddress ? 'address' : 'object'}/${id}?network=${this.network}`;
+      }
+      return {
+        $template: '#explorer-link-template',
+        data: props.data,
+        text: props.text,
+        getUrl
+      }
+    }
+
+    function MoveCallArgument(props){
+      return {
+        $template: "#move-call-arg",
+        input: props.input
+      }
+    }
+
+    createApp({
+        network: 'mainnet',
+        activeTab: 2,
+        tabs: [
+            { id: 2, name: 'Transactions', content: 'Transactions' },
+            { id: 3, name: 'Gas Analysis', content: 'Gas Analysis' },
+            { id: 4, name: 'Raw JSON', content: 'Raw JSON'}
+        ],
+        json: jsonObject,
+        commands: jsonObject.transaction_info.ProgrammableTransaction.commands,
+        inputs: jsonObject.transaction_info.ProgrammableTransaction.inputs,
+      count: 0,
+      ExplorerLink,
+      MoveCallArgument,
+
+      formatObject(object){
+        if (!object || typeof object !== 'object') return null;
+        if (!'Object' in object) return object;
+
+        const data = object.Object;
+
+        if('SharedObject' in data) {
+          return {
+            objectId: data.SharedObject.id,
+            mutable: data.SharedObject.mutable,
+            initialSharedVersion: data.SharedObject.initial_shared_version
+          }
+        }
+        
+        return data;
+      },
+
+      expandAll(){
+        document.getElementById('json-viewer').expandAll();
+      },
+      collapseAll(){
+        document.getElementById('json-viewer').collapseAll();
+      },
+
+      getInput(index){
+        return inputs()[index] || null;
+      }
+    }).mount();
+
+</script>
+<!-- v-scope value can be omitted -->
+<div v-scope class="container mx-auto py-3">
+
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold">Transaction Details</h1>
+    <div>
+      <p>Execution status: {{json.effects.status.status === 'success' ? '✅ Successfully executed' : '❌ Failed to execute!'}}</p>
+      <p>Executed Epoch: {{ json.effects.executedEpoch }}</p>
+      <p>Gas Cost: {{ ( +json.effects.gasUsed.computationCost + +json.effects.gasUsed.storageCost - +json.effects.gasUsed.storageRebate) / 1_000_000_000  }} SUI</p>
+      <p>Transaction Digest: <span v-scope="ExplorerLink({ data: { digest: json.effects.transactionDigest }, text: json.effects.transactionDigest })"></span></p>
+    </div>
+  </div>
+  <div class="flex items-center bg-slate-100 mb-3 rounded-lg overflow-x-auto">
+    <div v-for="(tab, index) in tabs" 
+          :key="index" 
+          class="cursor-pointer flex px-2 py-3 "
+          :class="activeTab === tab.id ? 'bg-slate-200' : 'bg-slate-100'"
+        @click="activeTab = tab.id" >
+      <h2>{{ tab.name }}</h2>
+    </div>
+  </div>
+
+  <!-- Renders the object changes -->
+  <div v-if="activeTab === 1">
+    <pre>{{ json.effects.mutated }}</pre>
+  </div>
+
+  <!-- Renders the PTBs -->
+  <div v-if="activeTab === 2">
+    <div v-for="(input, index) in commands" :key="index" class="border-gray-400 rounded-lg border mb-3 overflow-hidden">
+      <div class="bg-slate-100 px-3 py-2">
+        <p class="font-bold pb-2">
+          {{ index }}. {{Object.keys(input)[0]}}
+        </p>
+        <span v-if="input.MoveCall">
+          Package: <span v-scope="ExplorerLink({ data: { id: input.MoveCall.package }, text: input.MoveCall.package})"></span>
+          
+          <br>
+          Module: <span v-scope="ExplorerLink({ data: { id: input.MoveCall.package, module: input.MoveCall.module }, text: input.MoveCall.module})"></span>
+          <br>
+          Function: {{ input.MoveCall.function }}<br>
+        </span>
+      </div>
+      <!-- Move Call -->
+      <div v-if="!!input.MoveCall" class="px-3">
+        <div class="flex gap-3 overflow-x-auto">
+          <div v-for="(arg, argIdx) in input.MoveCall.arguments" :key="index + '-' + argIdx" v-scope="MoveCallArgument({input: arg })"></div>
+        </div>
+      </div>
+      <div v-else-if="!!input.SplitCoins" class="px-3">
+        <div v-scope="MoveCallArgument({input: input.SplitCoins[0] })"></div>
+
+        <div class="flex gap-3 overflow-x-auto">
+          <div v-for="(arg, argIdx) in input.SplitCoins[1]" :key="index + '-' + argIdx" v-scope="MoveCallArgument({input: arg })"></div>
+        </div>
+      </div>
+      <div v-else class="p-3">
+        {{ input }}
+      </div>
+    </div>
+  </div>
+
+  <div v-if="activeTab === 3">
+    <div class="flex">
+      <button class="toggle-outline-btn" @click="expandAll">Expand all</button>
+      <button class="toggle-outline-btn" @click="collapseAll">Collapse all</button>
+    </div>
+    
+    <json-viewer class="px-6 py-3" id="json-viewer">
+        {{ JSON.stringify(json.gas_status.V2) }}
+    </json-viewer>
+  </div>
+  <div v-if="activeTab === 4">
+    <div class="flex">
+      <button class="toggle-outline-btn" @click="expandAll">Expand all</button>
+      <button class="toggle-outline-btn" @click="collapseAll">Collapse all</button>
+    </div>
+    <json-viewer class="px-6 py-3" id="json-viewer">
+        {{ JSON.stringify(json) }}
+    </json-viewer>
+  </div>
+</div>
+</body>
+
+<!-- Re-usable components of the system -->
+<!-- A template for `MoveCall` args or generally rendering `Inputs` -->
+<template id="move-call-arg">
+  <div class="mt-6 flex-shrink-0 break-words w-[350px] max-h-[215px] overflow-auto mb-6 p-3 border border-gray-400 rounded-lg text-sm">
+    <div v-if="typeof input === 'string'">
+      {{ input }}
+    </div>
+    <div v-else-if="inputs[input.Input]">
+      <div v-if="inputs[input.Input].Pure">
+        Pure: <br/> {{inputs[input.Input].Pure}}
+      </div>
+      <div v-else-if="formatObject(inputs[input.Input])">
+        <div v-for="[key, value] in Object.entries(formatObject(inputs[input.Input]))" class="pb-3">
+          <span class="capitalize">{{ key }}: </span>
+          <span class="font-semibold">
+            <div v-if="key === 'objectId'" v-scope="ExplorerLink({ key, data: { id: value }, text: value})"></div>
+            <span v-if="key !== 'objectId'">
+              {{ value }}
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div v-else>
+      {{ formatObject(inputs[input.Input]) || inputs[input.Input] || input }}
+    </div>
+</div>
+</template>
+
+<!--Explorer Link Template-->
+<template id="explorer-link-template">
+  <a :href="getUrl(data)" class="underline " target="_blank">
+    {{ text }}
+  </a>
+</template>
+
+<script src="https://unpkg.com/@alenaksu/json-viewer@2.0.0/dist/json-viewer.bundle.js" defer></script>
+</html>
