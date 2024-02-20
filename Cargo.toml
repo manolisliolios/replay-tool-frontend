@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 include_dir = "0.7.3"
+open = "5.0.1"
 tokio = {version = "1.36.0", features = ["macros", "rt-multi-thread"] }
 warp = "0.3"

@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <title>Sui Replay Tool</title>
-  <!-- <link rel="stylesheet" href="styles.css" /> -->
+  <!-- 
+      When developing: uncomment this.
+      When building: comment this 
+  -->
+  <link rel="stylesheet" href="styles.css" />
   <style>
     .INSERT_STYLES_HERE{color:sui}
   </style>
@@ -57,7 +61,6 @@
         json: jsonObject,
         commands: jsonObject.transaction_info.ProgrammableTransaction.commands,
         inputs: jsonObject.transaction_info.ProgrammableTransaction.inputs,
-      count: 0,
       ExplorerLink,
       MoveCallArgument,
 
@@ -111,11 +114,6 @@
         @click="activeTab = tab.id" >
       <h2>{{ tab.name }}</h2>
     </div>
-  </div>
-
-  <!-- Renders the object changes -->
-  <div v-if="activeTab === 1">
-    <pre>{{ json.effects.mutated }}</pre>
   </div>
 
   <!-- Renders the PTBs -->

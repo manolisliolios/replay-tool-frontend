@@ -4,10 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "css-dev": "TAILWIND_MODE=watch postcss ./sources/tailwind.css -o ./sources/styles.css -w --verbose",
+    "css:dev": "TAILWIND_MODE=watch postcss ./sources/tailwind.css -o ./sources/styles.css -w --verbose",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "tailwind:css": "postcss ./sources/tailwind.css -o ./sources/styles.css --minify",
-    "dev": "npm run tailwind:css && nodemon server.js"
+    "tailwind:css": "postcss ./sources/tailwind.css -o ./sources/styles.css --minify"
   },
   "keywords": [],
   "author": "",

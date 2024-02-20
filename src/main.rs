@@ -15,4 +15,6 @@ fn main() {
 
     let mut file = File::create("out/foo.html").ok().unwrap();
     let _ = file.write_all(fixed_html.as_bytes());
+    
+    open::that("out/foo.html").ok();
 }
