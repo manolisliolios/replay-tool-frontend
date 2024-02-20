@@ -12,7 +12,6 @@ fn main() {
         // Replace the network to the one it was executed, OR the RPC endpoint.
         // .replace("network: 'mainnet',", "network: 'https://suifrens-rpc.mainnet.sui.io',")
         ;
-
     let mut file = File::create("out/foo.html").ok().unwrap();
     let _ = file.write_all(fixed_html.as_bytes());
     
